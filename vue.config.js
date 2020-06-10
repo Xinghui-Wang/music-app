@@ -16,9 +16,13 @@ module.exports = {
   },
   devServer: {
     before (app) {
-      app.get('/api/getTopBanner', function (req, res) {
+      app.get('/api/getRecommendData', function (req, res) {
         const url = 'https://u.y.qq.com/cgi-bin/musics.fcg'
-        const RecommendlinkUrl = 'https://y.qq.com/'
+        const jumpPrefixMap = {
+          10002: 'https://y.qq.com/n/yqq/album/',
+          10014: 'https://y.qq.com/n/yqq/playlist/',
+          10012: 'https://y.qq.com/n/yqq/mv/v/'
+        }
 
         axios.get(url, {
           headers: {
@@ -30,21 +34,39 @@ module.exports = {
           response = response.data
           if (response.code === ERR_OK) {
             const slider = []
-            const content = response.focus.data.shelf.v_niche[0].v_card
-            if (content) {
-              for (let i = 0; i < content.length; i++) {
-                const item = content[i]
+            const discList = []
+            const contentSlider = response.focus.data.shelf.v_niche[0].v_card
+            const contentDisc = response.recomPlaylist.data.v_hot
+            if (contentSlider && contentDisc) {
+              for (let i = 0; i < contentSlider.length; i++) {
+                const item = contentSlider[i]
                 const sliderItem = {}
-                sliderItem.id = item.id + i
-                sliderItem.linkUrl = RecommendlinkUrl
+                sliderItem.id = `${item.id}_${i}`
+                const jumpPrefix = jumpPrefixMap[item.jumptype]
+                if (!jumpPrefix) {
+                  sliderItem.linkUrl = item.id
+                } else {
+                  const jumpMid = item.subid || item.id
+                  sliderItem.linkUrl = jumpPrefix + jumpMid + '.html'
+                }
                 sliderItem.picUrl = item.cover
                 slider.push(sliderItem)
+              }
+              for (let i = 0; i < contentDisc.length; i++) {
+                const item = contentDisc[i]
+                const discItem = {}
+                discItem.id = `${item.id}_${i}`
+                discItem.title = item.title
+                discItem.listen_num = item.listen_num
+                discItem.imgUrl = item.cover
+                discList.push(discItem)
               }
             }
             res.json({
               code: 0,
               data: {
-                slider
+                slider,
+                discList
               }
             })
           } else {
