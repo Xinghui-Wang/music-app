@@ -1,3 +1,5 @@
+import { getSongsUrl } from 'api/song'
+
 export default class Song {
   constructor ({ id, mid, singer, name, album, duration, image, url }) {
     this.id = id
@@ -7,6 +9,7 @@ export default class Song {
     this.album = album
     this.duration = duration
     this.image = image
+    // this.filename = `C400${this.mid}.m4a`
     this.url = url
   }
 }
@@ -20,7 +23,7 @@ export function createSong (musicData) {
     album: musicData.albumname,
     duration: musicData.interval, // 歌曲时长 多少s
     image: `https://y.gtimg.cn/music/photo_new/T002R300x300M000${musicData.albummid}.jpg?max_age=2592000`,
-    url: `http://ws.stream.qqmusic.qq.com/${musicData.songid}.m4a?fromtag=46`
+    url: musicData.url
   })
 }
 
@@ -33,4 +36,21 @@ export function filterSinger (singer) {
     ret.push(s.name)
   })
   return ret.join('/')
+}
+
+export function processSongsUrl (songs) {
+  if (!songs.length) {
+    return Promise.resolve(songs)
+  }
+  return getSongsUrl(songs).then((purlMap) => {
+    songs = songs.filter((song) => {
+      const purl = purlMap[song.mid]
+      if (purl) {
+        song.url = purl.indexOf('http') === -1 ? `http://dl.stream.qqmusic.qq.com/${purl}` : purl
+        return true
+      }
+      return false
+    })
+    return songs
+  })
 }
