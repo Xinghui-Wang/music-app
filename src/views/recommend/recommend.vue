@@ -20,7 +20,7 @@
         <div class="recommend-list">
           <h1 class="list-title">热门歌单推荐</h1>
           <ul>
-            <li class="item" v-for="item of disc" :key="item.id">
+            <li class="item" @click="selectItem(item)" v-for="item of disc" :key="item.id">
               <div class="icon">
                 <img v-lazy="item.imgUrl">
               </div>
@@ -32,10 +32,11 @@
           </ul>
         </div>
       </div>
+      <div class="loading-container-two" v-show="!disc.length">
+        <loading></loading>
+      </div>
     </scroll>
-    <div class="loading-container-two" v-show="!disc.length">
-      <loading></loading>
-    </div>
+    <router-view></router-view>
   </div>
 </template>
 
@@ -77,6 +78,9 @@ export default {
         this.$refs.scroll.refresh()
         this.checkloaded = true
       }
+    },
+    selectItem (item) {
+      this.$router.push('/')
     }
   }
 }
