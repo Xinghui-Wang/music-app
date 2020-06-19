@@ -7,7 +7,8 @@ const state = {
   playList: [],
   sequenceList: [],
   mode: palyMode.sequence,
-  currentIndex: -1
+  currentIndex: -1,
+  disc: {}
 }
 
 export default state

@@ -1,6 +1,6 @@
 <template>
   <div class="recommend">
-    <scroll class="recommend-content" :data="disc" ref="scroll">
+    <scroll class="recommend-content" :data="discList" ref="scroll">
       <div>
         <div class="wrapper">
           <div class="slider-wrapper" v-if="recommends.length">
@@ -20,19 +20,19 @@
         <div class="recommend-list">
           <h1 class="list-title">热门歌单推荐</h1>
           <ul>
-            <li class="item" @click="selectItem(item)" v-for="item of disc" :key="item.id">
+            <li class="item" @click="selectItem(item)" v-for="item of discList" :key="item.dissid">
               <div class="icon">
-                <img v-lazy="item.imgUrl">
+                <img v-lazy="item.imgurl">
               </div>
               <div class="text">
-                <h2 class="name">{{item.title}}</h2>
-                <p class="desc">{{`播放量${(item.listen_num / 10000).toFixed(2)}万`}}</p>
+                <h2 class="name" v-html="item.dissname"></h2>
+                <p class="desc" v-html="item.creator.name"></p>
               </div>
             </li>
           </ul>
         </div>
       </div>
-      <div class="loading-container-two" v-show="!disc.length">
+      <div class="loading-container-two" v-show="!discList.length">
         <loading></loading>
       </div>
     </scroll>
@@ -41,7 +41,8 @@
 </template>
 
 <script type="text/ecmascript-6">
-import { getRecommend } from 'api/recommend'
+import { mapMutations } from 'vuex'
+import { getRecommend, getDiscList } from 'api/recommend'
 import { ERR_OK } from 'api/config'
 import Slider from 'components/slider'
 import Scroll from 'components/scroll'
@@ -52,7 +53,7 @@ export default {
   data () {
     return {
       recommends: [],
-      disc: [],
+      discList: [],
       checkloaded: false
     }
   },
@@ -63,13 +64,21 @@ export default {
   },
   created () {
     this._getRecommend()
+    this._getDiscList()
+    console.log(this.discList)
   },
   methods: {
     _getRecommend () {
       getRecommend().then((res) => {
         if (res.code === ERR_OK) {
           this.recommends = res.data.slider
-          this.disc = res.data.discList
+        }
+      })
+    },
+    _getDiscList () {
+      getDiscList().then((res) => {
+        if (res.code === ERR_OK) {
+          this.discList = res.data.list
         }
       })
     },
@@ -80,8 +89,14 @@ export default {
       }
     },
     selectItem (item) {
-      this.$router.push('/')
-    }
+      this.$router.push({
+        path: `/recommend/${item.dissid}`
+      })
+      this.setDisc(item)
+    },
+    ...mapMutations({
+      setDisc: 'SET_DISC'
+    })
   }
 }
 </script>

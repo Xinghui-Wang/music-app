@@ -1,4 +1,3 @@
-const ERR_OK = 0
 const path = require('path')
 const axios = require('axios')
 const bodyParser = require('body-parser')
@@ -17,66 +16,44 @@ module.exports = {
   },
   devServer: {
     before (app) {
-      app.get('/api/getRecommendData', function (req, res) {
-        const url = 'https://u.y.qq.com/cgi-bin/musics.fcg'
-        const jumpPrefixMap = {
-          10002: 'https://y.qq.com/n/yqq/album/',
-          10014: 'https://y.qq.com/n/yqq/playlist/',
-          10012: 'https://y.qq.com/n/yqq/mv/v/'
-        }
-
+      app.get('/api/getDiscList', function (req, res) {
+        const url = 'https://c.y.qq.com/splcloud/fcgi-bin/fcg_get_diss_by_tag.fcg'
         axios.get(url, {
           headers: {
-            referer: 'https://y.qq.com/',
-            host: 'u.y.qq.com'
+            referer: 'https://c.y.qq.com/',
+            host: 'c.y.qq.com'
           },
           params: req.query
         }).then((response) => {
-          response = response.data
-          if (response.code === ERR_OK) {
-            const slider = []
-            const discList = []
-            const contentSlider = response.focus.data.shelf.v_niche[0].v_card
-            const contentDisc = response.recomPlaylist.data.v_hot
-            if (contentSlider && contentDisc) {
-              for (let i = 0; i < contentSlider.length; i++) {
-                const item = contentSlider[i]
-                const sliderItem = {}
-                sliderItem.id = `${item.id}_${i}`
-                const jumpPrefix = jumpPrefixMap[item.jumptype]
-                if (!jumpPrefix) {
-                  sliderItem.linkUrl = item.id
-                } else {
-                  const jumpMid = item.subid || item.id
-                  sliderItem.linkUrl = jumpPrefix + jumpMid + '.html'
-                }
-                sliderItem.picUrl = item.cover
-                slider.push(sliderItem)
-              }
-              for (let i = 0; i < contentDisc.length; i++) {
-                const item = contentDisc[i]
-                const discItem = {}
-                discItem.id = `${item.id}_${i}`
-                discItem.title = item.title
-                discItem.listen_num = item.listen_num
-                discItem.imgUrl = item.cover
-                discList.push(discItem)
-              }
-            }
-            res.json({
-              code: 0,
-              data: {
-                slider,
-                discList
-              }
-            })
-          } else {
-            res.json(response)
-          }
+          res.json(response.data)
         }).catch((e) => {
           console.log(e)
         })
       })
+
+      app.get('/api/getCdInfo', function (req, res) {
+        const url = 'https://c.y.qq.com/qzone/fcg-bin/fcg_ucc_getcdinfo_byids_cp.fcg'
+        axios.get(url, {
+          headers: {
+            referer: 'https://c.y.qq.com/',
+            host: 'c.y.qq.com'
+          },
+          params: req.query
+        }).then((response) => {
+          let ret = response.data
+          if (typeof ret === 'string') {
+            const reg = /^\w+\(({.+})\)$/
+            const matches = ret.match(reg)
+            if (matches) {
+              ret = JSON.parse(matches[1])
+            }
+          }
+          res.json(ret)
+        }).catch((e) => {
+          console.log(e)
+        })
+      })
+
       app.post('/api/getPurlUrl', bodyParser.json(), function (req, res) {
         const url = 'https://u.y.qq.com/cgi-bin/musicu.fcg'
         axios.post(url, req.body, {

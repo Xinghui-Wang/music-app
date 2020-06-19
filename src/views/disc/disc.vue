@@ -1,14 +1,42 @@
 <template>
   <transition appear name="slide">
-    <music-list></music-list>
+    <music-list :title="title" :bg-image="bgImage"></music-list>
   </transition>
 </template>
 
 <script>
+import { mapGetters } from 'vuex'
 import MusicList from 'components/music-list'
+import { getSongList } from 'api/recommend'
 
 export default {
   name: 'Disc',
+  computed: {
+    title () {
+      return this.disc.dissname
+    },
+    bgImage () {
+      return this.disc.imgurl
+    },
+    ...mapGetters([
+      'disc'
+    ])
+  },
+  data () {
+    return {
+      songs: []
+    }
+  },
+  created () {
+    this._getSongList()
+  },
+  methods: {
+    _getSongList () {
+      getSongList(this.disc.dissid).then((res) => {
+        console.log(res)
+      })
+    }
+  },
   components: {
     MusicList
   }
