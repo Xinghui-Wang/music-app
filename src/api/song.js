@@ -2,17 +2,19 @@ import axios from 'axios'
 import { commonParams, ERR_OK } from './config'
 import { getUid } from 'common/js/uid'
 
-const debug = process.env.NODE_ENV !== 'production'
-
 export function getSongsUrl (songs) {
-  const url = debug ? '/api/getPurlUrl' : 'http://ustbhuangyi.com/music/api/getPurlUrl'
+  const url = '/api/getPurlUrl'
+
   let mids = []
   let types = []
+
   songs.forEach((song) => {
     mids.push(song.mid)
     types.push(0)
   })
-  const urlMid = getUrlMid(mids, types)
+
+  const urlMid = genUrlMid(mids, types)
+
   const data = Object.assign({}, commonParams, {
     g_tk: 5381,
     format: 'json',
@@ -23,6 +25,7 @@ export function getSongsUrl (songs) {
 
   return new Promise((resolve, reject) => {
     let tryTime = 3
+
     function request () {
       return axios.post(url, {
         comm: data,
@@ -64,7 +67,7 @@ export function getSongsUrl (songs) {
   })
 }
 
-function getUrlMid (mids, types) {
+function genUrlMid (mids, types) {
   const guid = getUid()
   return {
     module: 'vkey.GetVkeyServer',

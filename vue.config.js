@@ -59,12 +59,12 @@ module.exports = {
         axios.post(url, req.body, {
           headers: {
             referer: 'https://y.qq.com/',
-            origin: 'https://y.qq.com/',
+            origin: 'https://y.qq.com',
             'Content-type': 'application/x-www-form-urlencoded'
           }
-        }).then((response) => {
+        }).then(response => {
           res.json(response.data)
-        }).catch((e) => {
+        }).catch(e => {
           console.log(e)
         })
       })

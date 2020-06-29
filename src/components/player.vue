@@ -21,7 +21,7 @@
           <div class="middle-l">
             <div class="cd-wrapper" ref="cdWrapper">
               <div class="cd">
-                <img class="image" :src="currentSong.image">
+                <img class="image" :class="cdCls" :src="currentSong.image">
               </div>
             </div>
             <div class="playing-lyric-wrapper">
@@ -45,22 +45,24 @@
             <span class="dot"></span>
           </div>
           <div class="progress-wrapper">
-            <span class="time time-l"></span>
-            <div class="progress-bar-wrapper"></div>
-            <span class="time time-r"></span>
+            <span class="time time-l">{{format(currentTime)}}</span>
+            <div class="progress-bar-wrapper">
+              <progress-bar :percent="percent" @percentChange="onProgressBarChange"></progress-bar>
+            </div>
+            <span class="time time-r">{{format(currentSong.duration)}}</span>
           </div>
           <div class="operators">
-            <div class="icon i-left">
-              <i class="icon-sequence"></i>
+            <div class="icon i-left" @click="changeMode">
+              <i :class="iconMode"></i>
             </div>
-            <div class="icon i-left">
-              <i class="icon-prev"></i>
+            <div class="icon i-left" :class="disableCls">
+              <i @click="prev" class="icon-prev"></i>
             </div>
-            <div class="icon i-center">
-              <i class="icon-play"></i>
+            <div class="icon i-center" :class="disableCls">
+              <i :class="playIcon" @click="togglePlaying"></i>
             </div>
-            <div class="icon i-right">
-              <i class="icon-next"></i>
+            <div class="icon i-right" :class="disableCls">
+              <i @click="next" class="icon-next"></i>
             </div>
             <div class="icon i-right">
               <i class="icon icon-not-favorite"></i>
@@ -73,7 +75,7 @@
       <div class="mini-player" v-show="!fullScreen" @click="open">
         <div class="icon">
           <div class="imgWrapper">
-            <img width="40" height="40" :src="currentSong.image">
+            <img width="40" height="40" :class="cdCls" :src="currentSong.image">
           </div>
         </div>
         <div class="text">
@@ -81,31 +83,67 @@
           <p class="desc">{{currentSong.singer}}</p>
         </div>
         <div class="control">
-          <i class="icon-play icon-play-mini"></i>
+          <progress-circle :radius="radius" :percent="percent">
+            <i :class="miniIcon" class="icon-mini" @click.stop="togglePlaying"></i>
+          </progress-circle>
         </div>
         <div class="control">
           <i class="icon-playlist"></i>
         </div>
       </div>
     </transition>
+    <audio ref="audio" :src="currentSong.url" @canplay="ready" @error="error" @timeupdate="updateTime" @ended="end"></audio>
   </div>
 </template>
 
 <script>
 import { mapGetters, mapMutations } from 'vuex'
 import Scroll from 'components/scroll'
+import ProgressBar from 'components/progress-bar'
+import ProgressCircle from 'components/progress-circle'
 import animations from 'create-keyframe-animation'
 import { prefixStyle } from 'common/js/dom'
+import { palyMode } from 'common/js/config'
+import { shuffle } from 'common/js/util'
 
 const transform = prefixStyle('transform')
 
 export default {
   name: 'Player',
+  data () {
+    return {
+      songReady: false,
+      currentTime: 0,
+      radius: 32
+    }
+  },
   computed: {
+    cdCls () {
+      return this.playing ? 'play' : 'play pause'
+    },
+    playIcon () {
+      return this.playing ? 'icon-pause' : 'icon-play'
+    },
+    iconMode () {
+      return this.mode === palyMode.sequence ? 'icon-sequence' : this.mode === palyMode.loop ? 'icon-loop' : 'icon-random'
+    },
+    miniIcon () {
+      return this.playing ? 'icon-pause-mini' : 'icon-play-mini'
+    },
+    disableCls () {
+      return this.songReady ? '' : 'disable'
+    },
+    percent () {
+      return this.currentTime / this.currentSong.duration
+    },
     ...mapGetters([
       'fullScreen',
       'playList',
-      'currentSong'
+      'currentSong',
+      'playing',
+      'currentIndex',
+      'mode',
+      'sequenceList'
     ])
   },
   methods: {
@@ -152,6 +190,95 @@ export default {
       this.$refs.cdWrapper.style.transition = ''
       this.$refs.cdWrapper.style[transform] = ''
     },
+    togglePlaying () {
+      this.setPlayingState(!this.playing)
+    },
+    end () {
+      if (this.mode === palyMode.loop) {
+        this.loop()
+      } else {
+        this.next()
+      }
+    },
+    loop () {
+      this.$refs.audio.currentTime = 0
+      this.$refs.audio.play()
+    },
+    prev () {
+      if (!this.songReady) {
+        return
+      }
+      let index = this.currentIndex - 1
+      if (index === -1) {
+        index = this.playList.length - 1
+      }
+      this.setCurrentIndex(index)
+      if (!this.playing) {
+        this.togglePlaying()
+      }
+      this.songReady = false
+    },
+    next () {
+      if (!this.songReady) {
+        return
+      }
+      let index = this.currentIndex + 1
+      if (index === this.playList.length) {
+        index = 0
+      }
+      this.setCurrentIndex(index)
+      if (!this.playing) {
+        this.togglePlaying()
+      }
+      this.songReady = false
+    },
+    ready () {
+      this.songReady = true
+    },
+    error () {
+      this.songReady = true
+    },
+    updateTime (e) {
+      this.currentTime = e.target.currentTime
+    },
+    format (interval) {
+      interval = interval | 0 // 向下取整
+      const minute = interval / 60 | 0
+      const second = this._pad(interval % 60)
+      return `${minute}:${second}`
+    },
+    onProgressBarChange (percent) {
+      this.$refs.audio.currentTime = this.currentSong.duration * percent // audio.currentTime是一个可读写属性
+      if (!this.playing) {
+        this.togglePlaying()
+      }
+    },
+    changeMode () {
+      const mode = (this.mode + 1) % 3
+      this.setPlayMode(mode)
+      let list = null
+      if (mode === palyMode.random) {
+        list = shuffle(this.sequenceList)
+      } else {
+        list = this.sequenceList
+      }
+      this.resetCurrentIndex(list)
+      this.setPlayList(list)
+    },
+    resetCurrentIndex (list) {
+      let index = list.findIndex((item) => {
+        return item.id === this.currentSong.id
+      })
+      this.setCurrentIndex(index)
+    },
+    _pad (num, n = 2) { // 长度不够的数字补0
+      let len = num.toString().length
+      while (len < n) {
+        num = '0' + num
+        len++
+      }
+      return num
+    },
     _getPosAndScale () {
       const targetWidth = 40
       const paddingLeft = 40
@@ -164,11 +291,33 @@ export default {
       return { scale, x, y }
     },
     ...mapMutations({
-      setFullScreen: 'SET_FULL_SCREEN'
+      setFullScreen: 'SET_FULL_SCREEN',
+      setPlayingState: 'SET_PLAYING_STATE',
+      setCurrentIndex: 'SET_CURRENT_INDEX',
+      setPlayMode: 'SET_PLAY_MODE',
+      setPlayList: 'SET_PLAYLIST'
     })
   },
+  watch: {
+    currentSong (newSong, oldSong) {
+      if (newSong.id === oldSong.id) {
+        return
+      }
+      this.$nextTick(() => { // DOM更新是异步的
+        this.$refs.audio.play()
+      })
+    },
+    playing (newPlaying) {
+      const audio = this.$refs.audio
+      this.$nextTick(() => {
+        newPlaying ? audio.play() : audio.pause()
+      })
+    }
+  },
   components: {
-    Scroll
+    Scroll,
+    ProgressBar,
+    ProgressCircle
   }
 }
 </script>
@@ -255,6 +404,10 @@ export default {
                 box-sizing border-box
                 border-radius 50%
                 border 10px solid rgba(255,255,255,0.1)
+              .play
+                animation rotate 20s linear infinite
+              .pause
+                animation-play-state paused
         .middle-r
           display inline-block
           vertical-align top
@@ -353,6 +506,10 @@ export default {
           width 100%
           img
             border-radius 50%
+            &.play
+              animation rotate 10s linear infinite
+            &.pause
+              animation-play-state paused
       .text
         display flex
         flex-direction column
@@ -376,9 +533,14 @@ export default {
         .icon-play-mini, .icon-pause-mini, .icon-playlist
           font-size 30px
           color $color-theme-d
-          .icon-mini
-            font-size 32px
-            position absolute
-            left 0
-            top 0
+        .icon-mini
+          font-size 32px
+          position absolute
+          left 0
+          top 0
+  @keyframes rotate
+    0%
+      transform rotate(0)
+    100%
+      transform rotate(360deg)
 </style>
