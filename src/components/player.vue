@@ -103,7 +103,7 @@ import ProgressBar from 'components/progress-bar'
 import ProgressCircle from 'components/progress-circle'
 import animations from 'create-keyframe-animation'
 import { prefixStyle } from 'common/js/dom'
-import { palyMode } from 'common/js/config'
+import { playMode } from 'common/js/config'
 import { shuffle } from 'common/js/util'
 
 const transform = prefixStyle('transform')
@@ -125,7 +125,7 @@ export default {
       return this.playing ? 'icon-pause' : 'icon-play'
     },
     iconMode () {
-      return this.mode === palyMode.sequence ? 'icon-sequence' : this.mode === palyMode.loop ? 'icon-loop' : 'icon-random'
+      return this.mode === playMode.sequence ? 'icon-sequence' : this.mode === playMode.loop ? 'icon-loop' : 'icon-random'
     },
     miniIcon () {
       return this.playing ? 'icon-pause-mini' : 'icon-play-mini'
@@ -194,7 +194,7 @@ export default {
       this.setPlayingState(!this.playing)
     },
     end () {
-      if (this.mode === palyMode.loop) {
+      if (this.mode === playMode.loop) {
         this.loop()
       } else {
         this.next()
@@ -257,7 +257,7 @@ export default {
       const mode = (this.mode + 1) % 3
       this.setPlayMode(mode)
       let list = null
-      if (mode === palyMode.random) {
+      if (mode === playMode.random) {
         list = shuffle(this.sequenceList)
       } else {
         list = this.sequenceList
