@@ -305,6 +305,7 @@ export default {
       }
       this.$nextTick(() => { // DOM更新是异步的
         this.$refs.audio.play()
+        this.currentSong.getLyric()
       })
     },
     playing (newPlaying) {
